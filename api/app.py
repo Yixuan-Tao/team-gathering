@@ -161,3 +161,43 @@ def direction():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+@app.route('/api/geocode', methods=['POST', 'OPTIONS'])
+@cors
+def geocode():
+    if request.method == 'OPTIONS':
+        return jsonify({}), 204
+
+    data = request.get_json()
+    address = data.get('address')
+
+    if not address:
+        return jsonify({'error': '缺少地址参数'}), 400
+
+    url = 'https://restapi.amap.com/v3/geocode/geo'
+    params = {
+        'key': AMAP_KEY,
+        'address': address,
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+
+        if data.get('status') != '1':
+            return jsonify({'error': data.get('info', '地理编码失败')}), 400
+
+        geocodes = data.get('geocodes', [])
+        if geocodes:
+            geo = geocodes[0]
+            location = geo.get('location', '').split(',')
+            return jsonify({
+                'lat': float(location[1]) if len(location) > 1 else 0,
+                'lng': float(location[0]) if len(location) > 0 else 0,
+                'formatted_address': geo.get('formatted_address'),
+            })
+
+        return jsonify({'error': '未找到地址'})
+    except Exception as e:
+        return jsonify({'error': f'请求失败: {str(e)}'}), 500

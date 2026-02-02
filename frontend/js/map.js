@@ -1,7 +1,6 @@
 const MapManager = {
     map: null,
     markers: new Map(),
-    placeSearch: null,
     driving: null,
     transit: null,
     walking: null,
@@ -19,20 +18,12 @@ const MapManager = {
                 return;
             }
 
-            AMap.plugin(['AMap.PlaceSearch', 'AMap.Driving', 'AMap.Transfer', 'AMap.Walking'], () => {
+            AMap.plugin(['AMap.Driving', 'AMap.Transfer', 'AMap.Walking'], () => {
                 try {
                     this.map = new AMap.Map(containerId, {
                         zoom: 12,
                         center: [116.397428, 39.90923],
                         ...options,
-                    });
-
-                    this.placeSearch = new AMap.PlaceSearch({
-                        type: '',
-                        city: '全国',
-                        citylimit: false,
-                        pageSize: 20,
-                        pageIndex: 1,
                     });
 
                     this.driving = new AMap.Driving({
@@ -66,73 +57,54 @@ const MapManager = {
         }
     },
 
-    async search(keyword, city = '全国') {
-        await this.ensureInitialized();
-        return new Promise((resolve, reject) => {
-            this.placeSearch.setCity(city);
-            this.placeSearch.search(keyword, (status, result) => {
-                if (status === 'complete' && result.info === 'OK') {
-                    resolve(result.pois);
-                } else {
-                    reject(new Error(result.info || '搜索失败'));
-                }
-            });
-        });
-    },
-
     async searchNearby(lat, lng, types, radius = 5000, keyword = '') {
         await this.ensureInitialized();
-        return new Promise((resolve, reject) => {
-            const center = [lng, lat];
-            const placeSearch = new AMap.PlaceSearch({
-                type: types,
-                city: '全国',
-                citylimit: false,
-                pageSize: 30,
-                pageIndex: 1,
+        
+        try {
+            const response = await fetch('/api/search-nearby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lng, types, keyword })
             });
-
-            placeSearch.searchNearBy(keyword, center, radius, (status, result) => {
-                if (status === 'complete' && result.info === 'OK') {
-                    resolve(result.pois);
-                } else {
-                    reject(new Error(result.info || '搜索失败'));
-                }
-            });
-        });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            return data.pois || [];
+        } catch (error) {
+            console.error('Search nearby error:', error);
+            return [];
+        }
     },
 
     async getTravelTime(origin, destination, mode = 'driving') {
         await this.ensureInitialized();
-        const originStr = `${origin[0]},${origin[1]}`;
-        const destStr = `${destination[0]},${destination[1]}`;
-
-        return new Promise((resolve, reject) => {
-            let service;
-            switch (mode) {
-                case 'driving':
-                    service = this.driving;
-                    break;
-                case 'transit':
-                    service = this.transit;
-                    break;
-                case 'walking':
-                    service = this.walking;
-                    break;
-                default:
-                    service = this.driving;
-            }
-
-            service.search(originStr, destStr, (status, result) => {
-                if (status === 'complete' && result.info === 'OK') {
-                    const route = result.routes[0];
-                    const timeInSeconds = route.time || 0;
-                    resolve(Math.round(timeInSeconds / 60));
-                } else {
-                    reject(new Error(result.info || '路线规划失败'));
-                }
+        
+        try {
+            const response = await fetch('/api/direction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    origin: [origin[1], origin[0]], 
+                    destination: [destination[1], destination[0]], 
+                    mode 
+                })
             });
-        });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            return Math.round((data.time || 0) / 60);
+        } catch (error) {
+            console.error('Get direction error:', error);
+            return 30;
+        }
     },
 
     addMarker(id, position, info, isMyLocation = false) {

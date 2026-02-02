@@ -252,19 +252,39 @@ function setupTeamPageListeners() {
         }
 
         try {
-            const results = await MapManager.search(keyword);
-            if (results && results.length > 0) {
-                const first = results[0];
-                const location = {
-                    lat: parseFloat(first.location.lat),
-                    lng: parseFloat(first.location.lng),
-                    address: first.address + first.name,
-                };
-                selectLocation(location);
-                MapManager.setCenter(location.lat, location.lng, 16);
+            searchBtn.disabled = true;
+            searchBtn.textContent = '搜索中...';
+            
+            await MapManager.ensureInitialized();
+            
+            // 使用后端API搜索地址
+            const response = await fetch('/api/geocode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: keyword })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                alert(data.error);
+                return;
             }
+            
+            const location = {
+                lat: data.lat,
+                lng: data.lng,
+                address: data.formatted_address || keyword,
+            };
+            
+            selectLocation(location);
+            MapManager.setCenter(location.lat, location.lng, 16);
+            
         } catch (error) {
             alert(error.message);
+        } finally {
+            searchBtn.disabled = false;
+            searchBtn.textContent = '搜索';
         }
     });
 
