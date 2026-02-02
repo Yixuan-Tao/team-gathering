@@ -1,11 +1,9 @@
-// 确保先加载config.js
-if (typeof CONFIG === 'undefined') {
-    throw new Error('config.js not loaded');
-}
+const supabaseUrl = 'https://nfslocwxeizcautcgljz.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mc2xvY3d4ZWl6Y2F1dGNnbGp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNzI1NzUsImV4cCI6MjA4NDc0ODU3NX0.ijTZI0Gv8I5MjKUgrR23_pEYdlwrjc4VRvOVJ1ERH8I';
 
-const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-const API_BASE_URL = CONFIG.API_BASE_URL;
+const API_BASE_URL = '/api';
 
 async function apiRequest(endpoint, options = {}) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
