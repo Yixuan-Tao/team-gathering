@@ -248,6 +248,19 @@ select:focus {
     cursor: not-allowed;
 }
 
+#login-btn,
+#register-btn {
+    margin-bottom: 12px;
+}
+
+#register-btn {
+    margin-top: 0;
+}
+
+#login-btn:last-of-type {
+    margin-bottom: 0;
+}
+
 .error {
     color: var(--danger);
     font-size: 14px;

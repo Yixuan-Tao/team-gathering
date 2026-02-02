@@ -3,7 +3,8 @@ const Auth = {
         const { error } = await supabase.auth.signInWithOtp({
             email: email,
             options: {
-                shouldCreateUser: false,
+                emailRedirectTo: undefined,
+                shouldCreateUser: true,
             }
         });
         if (error) throw error;

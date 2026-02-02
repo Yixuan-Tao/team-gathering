@@ -63,78 +63,68 @@ function setupEventListeners(isTeamPage) {
 
 function setupIndexPageListeners() {
     const emailInput = document.getElementById('email');
-    const otpInput = document.getElementById('otp');
-    const sendOtpBtn = document.getElementById('send-otp-btn');
-    const verifyOtpBtn = document.getElementById('verify-otp-btn');
-    const backBtn = document.getElementById('back-btn');
-    const resendBtn = document.getElementById('resend-btn');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
     const createTeamBtn = document.getElementById('create-team-btn');
     const submitCreateBtn = document.getElementById('submit-create-btn');
     const cancelCreateBtn = document.getElementById('cancel-create-btn');
     const joinTeamBtn = document.getElementById('join-team-btn');
     const enterTeamBtn = document.getElementById('enter-team-btn');
 
-    sendOtpBtn.addEventListener('click', async () => {
+    loginBtn.addEventListener('click', async () => {
         const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             alert('请输入正确的邮箱地址');
             return;
         }
 
-        try {
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.textContent = '发送中...';
-            await Auth.sendOTP(email);
-            document.getElementById('email-form').style.display = 'none';
-            document.getElementById('otp-form').style.display = 'block';
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            sendOtpBtn.disabled = false;
-            sendOtpBtn.textContent = '发送登录链接';
-        }
-    });
-
-    resendBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        try {
-            resendBtn.disabled = true;
-            await Auth.resendOTP(email);
-            alert('验证码已重新发送');
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            resendBtn.disabled = false;
-        }
-    });
-
-    backBtn.addEventListener('click', () => {
-        document.getElementById('email-form').style.display = 'block';
-        document.getElementById('otp-form').style.display = 'none';
-        otpInput.value = '';
-    });
-
-    verifyOtpBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        const token = otpInput.value.trim();
-
-        if (!/^\d{6}$/.test(token)) {
-            alert('请输入6位验证码');
+        if (!password || password.length < 6) {
+            alert('请输入至少6位密码');
             return;
         }
 
         try {
-            verifyOtpBtn.disabled = true;
-            verifyOtpBtn.textContent = '登录中...';
-            await Auth.verifyOTP(email, token);
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            await Auth.signInWithPassword(email, password);
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('team-section').style.display = 'block';
             await loadUserTeams();
         } catch (error) {
             alert(error.message);
         } finally {
-            verifyOtpBtn.disabled = false;
-            verifyOtpBtn.textContent = '登录';
+            loginBtn.disabled = false;
+            loginBtn.textContent = '登录';
+        }
+    });
+
+    registerBtn.addEventListener('click', async () => {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('请输入正确的邮箱地址');
+            return;
+        }
+
+        if (!password || password.length < 6) {
+            alert('请输入至少6位密码');
+            return;
+        }
+
+        try {
+            registerBtn.disabled = true;
+            registerBtn.textContent = '注册中...';
+            await Auth.signUp(email, password);
+            alert('注册成功！请查收验证邮件，验证后即可登录');
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            registerBtn.disabled = false;
+            registerBtn.textContent = '注册';
         }
     });
 
