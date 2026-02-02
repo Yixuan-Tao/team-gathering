@@ -2,6 +2,9 @@ const Auth = {
     async sendOTP(email) {
         const { error } = await supabase.auth.signInWithOtp({
             email: email,
+            options: {
+                shouldCreateUser: false,
+            }
         });
         if (error) throw error;
     },
