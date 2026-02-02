@@ -33,49 +33,27 @@ alter table public.teams enable row level security;
 alter table public.locations enable row level security;
 
 -- 团队表策略
-create policy "团队成员可查看团队" on public.teams
-    for select using (
-        exists (
-            select 1 from public.locations
-            where public.locations.team_id = public.teams.id
-            and public.locations.user_id = auth.uid()
-        )
-    );
+create policy "用户可查看自己的团队" on public.teams
+    for select using (auth.uid() = created_by);
 
 create policy "用户可创建团队" on public.teams
     for insert with check (auth.uid() = created_by);
 
--- 位置表策略
-create policy "团队成员可查看位置" on public.locations
+-- 位置表策略 - 简化为允许用户操作自己的位置记录
+create policy "用户可查看团队位置" on public.locations
     for select using (
-        exists (
-            select 1 from public.locations l2
-            where l2.team_id = public.locations.team_id
-            and l2.user_id = auth.uid()
-        )
+        team_id in (select id from public.teams where created_by = auth.uid())
+        or user_id = auth.uid()
     );
 
-create policy "团队成员可更新位置" on public.locations
-    for update using (
-        exists (
-            select 1 from public.locations l2
-            where l2.team_id = public.locations.team_id
-            and l2.user_id = auth.uid()
-        )
-    );
+create policy "用户可更新自己的位置" on public.locations
+    for update using (user_id = auth.uid());
 
-create policy "团队成员可插入位置" on public.locations
-    for insert with check (
-        exists (
-            select 1 from public.locations l
-            where l.team_id = public.locations.team_id
-            and l.user_id = auth.uid()
-        )
-    );
+create policy "用户可插入自己的位置" on public.locations
+    for insert with check (user_id = auth.uid());
 
--- 允许匿名读取（可选，用于公开团队）
-create policy "公开团队可被任何人查看" on public.teams
-    for select using (true);
+create policy "用户可删除自己的位置" on public.locations
+    for delete using (user_id = auth.uid());
 
 -- 触发器：在插入位置时自动更新updated_at
 create or replace function update_updated_at_column()
