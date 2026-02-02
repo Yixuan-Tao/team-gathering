@@ -1,7 +1,13 @@
 const supabaseUrl = 'https://nfslocwxeizcautcgljz.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mc2xvY3d4ZWl6Y2F1dGNnbGp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNzI1NzUsImV4cCI6MjA4NDc0ODU3NX0.ijTZI0Gv8I5MjKUgrR23_pEYdlwrjc4VRvOVJ1ERH8I';
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+let supabase;
+
+if (typeof window.supabase !== 'undefined') {
+    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+} else {
+    console.error('Supabase SDK not loaded');
+}
 
 const API_BASE_URL = '/api';
 
