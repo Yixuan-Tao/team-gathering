@@ -34,6 +34,13 @@ const Auth = {
         return data;
     },
 
+    async resetPassword(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + window.location.pathname,
+        });
+        if (error) throw error;
+    },
+
     async signOut() {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
