@@ -308,8 +308,11 @@ function setupTeamPageListeners() {
         }
     });
 
-    MapManager.init('map');
-    loadTeamMembers();
+    MapManager.init('map').then(() => {
+        loadTeamMembers();
+    }).catch(err => {
+        console.error('Map init failed:', err);
+    });
 }
 
 async function loadUserTeams() {

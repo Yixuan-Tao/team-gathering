@@ -6,40 +6,52 @@ const MapManager = {
     transit: null,
     walking: null,
 
-    init(containerId, options = {}) {
-        this.map = new AMap.Map(containerId, {
-            zoom: 12,
-            center: [116.397428, 39.90923],
-            ...options,
-        });
+    async init(containerId, options = {}) {
+        return new Promise((resolve, reject) => {
+            AMap.plugin(['AMap.PlaceSearch', 'AMap.Driving', 'AMap.Transfer', 'AMap.Walking'], () => {
+                try {
+                    this.map = new AMap.Map(containerId, {
+                        zoom: 12,
+                        center: [116.397428, 39.90923],
+                        ...options,
+                    });
 
-        this.placeSearch = new AMap.PlaceSearch({
-            type: '',
-            city: '全国',
-            citylimit: false,
-            pageSize: 20,
-            pageIndex: 1,
-        });
+                    this.placeSearch = new AMap.PlaceSearch({
+                        type: '',
+                        city: '全国',
+                        citylimit: false,
+                        pageSize: 20,
+                        pageIndex: 1,
+                    });
 
-        this.driving = new AMap.Driving({
-            policy: AMap.DrivingPolicy.LEAST_TIME,
-            extensions: 'base',
-        });
+                    this.driving = new AMap.Driving({
+                        policy: AMap.DrivingPolicy.LEAST_TIME,
+                        extensions: 'base',
+                    });
 
-        this.transit = new AMap.Transfer({
-            policy: AMap.TransferPolicy.LEAST_TIME,
-            extensions: 'base',
-        });
+                    this.transit = new AMap.Transfer({
+                        policy: AMap.TransferPolicy.LEAST_TIME,
+                        extensions: 'base',
+                    });
 
-        this.walking = new AMap.Walking({
-            extensions: 'base',
-        });
+                    this.walking = new AMap.Walking({
+                        extensions: 'base',
+                    });
 
-        return this.map;
+                    resolve(this.map);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
     },
 
     search(keyword, city = '全国') {
         return new Promise((resolve, reject) => {
+            if (!this.placeSearch) {
+                reject(new Error('PlaceSearch not initialized'));
+                return;
+            }
             this.placeSearch.setCity(city);
             this.placeSearch.search(keyword, (status, result) => {
                 if (status === 'complete' && result.info === 'OK') {
@@ -53,6 +65,10 @@ const MapManager = {
 
     searchNearby(lat, lng, types, radius = 5000, keyword = '') {
         return new Promise((resolve, reject) => {
+            if (!this.placeSearch) {
+                reject(new Error('PlaceSearch not initialized'));
+                return;
+            }
             const center = [lng, lat];
             const placeSearch = new AMap.PlaceSearch({
                 type: types,
@@ -90,6 +106,11 @@ const MapManager = {
                     break;
                 default:
                     service = this.driving;
+            }
+
+            if (!service) {
+                reject(new Error('Route service not initialized'));
+                return;
             }
 
             service.search(originStr, destStr, (status, result) => {
@@ -174,7 +195,7 @@ const MapManager = {
 
     geocode(address) {
         return new Promise((resolve, reject) => {
-            AMap.service('AMap.Geocoder', () => {
+            AMap.plugin('AMap.Geocoder', () => {
                 const geocoder = new AMap.Geocoder({});
                 geocoder.getLocation(address, (status, result) => {
                     if (status === 'complete' && result.info === 'OK') {
@@ -192,5 +213,3 @@ const MapManager = {
         });
     },
 };
-
-AMap.event.addDomListener(document.getElementById('search-btn'), 'click', function() {});
