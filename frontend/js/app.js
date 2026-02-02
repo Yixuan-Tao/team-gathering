@@ -62,21 +62,22 @@ function setupEventListeners(isTeamPage) {
 }
 
 function setupIndexPageListeners() {
+    console.log('setupIndexPageListeners called');
+
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
-    const forgotBtn = document.getElementById('forgot-btn');
-    const resetEmailInput = document.getElementById('reset-email');
-    const sendResetBtn = document.getElementById('send-reset-btn');
-    const backToLoginBtn = document.getElementById('back-to-login-btn');
-    const createTeamBtn = document.getElementById('create-team-btn');
-    const submitCreateBtn = document.getElementById('submit-create-btn');
-    const cancelCreateBtn = document.getElementById('cancel-create-btn');
-    const joinTeamBtn = document.getElementById('join-team-btn');
-    const enterTeamBtn = document.getElementById('enter-team-btn');
+
+    if (!loginBtn || !registerBtn) {
+        console.error('Buttons not found');
+        return;
+    }
+
+    console.log('Buttons found, adding listeners');
 
     loginBtn.addEventListener('click', async () => {
+        console.log('Login button clicked');
         const email = emailInput.value.trim();
         const password = passwordInput.value;
 
@@ -173,35 +174,6 @@ function setupIndexPageListeners() {
         } finally {
             sendResetBtn.disabled = false;
             sendResetBtn.textContent = '发送重置链接';
-        }
-    });
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            alert('请输入正确的邮箱地址');
-            return;
-        }
-
-        if (!password || password.length < 6) {
-            alert('请输入至少6位密码');
-            return;
-        }
-
-        try {
-            registerBtn.disabled = true;
-            registerBtn.textContent = '注册中...';
-            const { data, error } = await Auth.signUp(email, password);
-            if (error) {
-                alert('注册失败：' + error.message);
-            } else {
-                alert('注册成功！\n\n现在可以使用邮箱和密码登录了。');
-                emailInput.value = '';
-                passwordInput.value = '';
-            }
-        } catch (error) {
-            alert('注册失败：' + error.message);
-        } finally {
-            registerBtn.disabled = false;
-            registerBtn.textContent = '注册';
         }
     });
 
