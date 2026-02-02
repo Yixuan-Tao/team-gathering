@@ -5,9 +5,20 @@ const MapManager = {
     driving: null,
     transit: null,
     walking: null,
+    initialized: false,
+    initPromise: null,
 
     async init(containerId, options = {}) {
-        return new Promise((resolve, reject) => {
+        if (this.initPromise) {
+            return this.initPromise;
+        }
+
+        this.initPromise = new Promise((resolve, reject) => {
+            if (typeof AMap === 'undefined') {
+                reject(new Error('AMap not loaded'));
+                return;
+            }
+
             AMap.plugin(['AMap.PlaceSearch', 'AMap.Driving', 'AMap.Transfer', 'AMap.Walking'], () => {
                 try {
                     this.map = new AMap.Map(containerId, {
@@ -38,20 +49,26 @@ const MapManager = {
                         extensions: 'base',
                     });
 
+                    this.initialized = true;
                     resolve(this.map);
                 } catch (error) {
                     reject(error);
                 }
             });
         });
+
+        return this.initPromise;
     },
 
-    search(keyword, city = '全国') {
+    async ensureInitialized() {
+        if (!this.initialized) {
+            await this.init('map');
+        }
+    },
+
+    async search(keyword, city = '全国') {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
-            if (!this.placeSearch) {
-                reject(new Error('PlaceSearch not initialized'));
-                return;
-            }
             this.placeSearch.setCity(city);
             this.placeSearch.search(keyword, (status, result) => {
                 if (status === 'complete' && result.info === 'OK') {
@@ -63,12 +80,9 @@ const MapManager = {
         });
     },
 
-    searchNearby(lat, lng, types, radius = 5000, keyword = '') {
+    async searchNearby(lat, lng, types, radius = 5000, keyword = '') {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
-            if (!this.placeSearch) {
-                reject(new Error('PlaceSearch not initialized'));
-                return;
-            }
             const center = [lng, lat];
             const placeSearch = new AMap.PlaceSearch({
                 type: types,
@@ -89,6 +103,7 @@ const MapManager = {
     },
 
     async getTravelTime(origin, destination, mode = 'driving') {
+        await this.ensureInitialized();
         const originStr = `${origin[0]},${origin[1]}`;
         const destStr = `${destination[0]},${destination[1]}`;
 
@@ -108,11 +123,6 @@ const MapManager = {
                     service = this.driving;
             }
 
-            if (!service) {
-                reject(new Error('Route service not initialized'));
-                return;
-            }
-
             service.search(originStr, destStr, (status, result) => {
                 if (status === 'complete' && result.info === 'OK') {
                     const route = result.routes[0];
@@ -126,6 +136,10 @@ const MapManager = {
     },
 
     addMarker(id, position, info, isMyLocation = false) {
+        if (!this.initialized) {
+            console.warn('Map not initialized yet');
+            return;
+        }
         this.removeMarker(id);
 
         const marker = new AMap.Marker({
@@ -151,6 +165,7 @@ const MapManager = {
     },
 
     removeMarker(id) {
+        if (!this.initialized) return;
         const marker = this.markers.get(id);
         if (marker) {
             marker.remove();
@@ -159,11 +174,13 @@ const MapManager = {
     },
 
     clearMarkers() {
+        if (!this.initialized) return;
         this.markers.forEach(marker => marker.remove());
         this.markers.clear();
     },
 
     setCenter(lat, lng, zoom = null) {
+        if (!this.initialized) return;
         this.map.setCenter([lng, lat]);
         if (zoom) {
             this.map.setZoom(zoom);
@@ -171,7 +188,7 @@ const MapManager = {
     },
 
     fitBounds(positions) {
-        if (positions.length === 0) return;
+        if (!this.initialized || positions.length === 0) return;
 
         if (positions.length === 1) {
             this.setCenter(positions[0][0], positions[0][1], 14);
@@ -185,7 +202,8 @@ const MapManager = {
         this.map.setBounds(bounds);
     },
 
-    onClick(callback) {
+    async onClick(callback) {
+        await this.ensureInitialized();
         this.map.on('click', (e) => {
             const lat = e.lnglat.getLat();
             const lng = e.lnglat.getLng();
@@ -193,7 +211,8 @@ const MapManager = {
         });
     },
 
-    geocode(address) {
+    async geocode(address) {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
             AMap.plugin('AMap.Geocoder', () => {
                 const geocoder = new AMap.Geocoder({});
