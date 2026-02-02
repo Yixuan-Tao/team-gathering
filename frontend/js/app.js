@@ -68,6 +68,15 @@ function setupIndexPageListeners() {
     const passwordInput = document.getElementById('password');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
+    const forgotBtn = document.getElementById('forgot-btn');
+    const resetEmailInput = document.getElementById('reset-email');
+    const sendResetBtn = document.getElementById('send-reset-btn');
+    const backToLoginBtn = document.getElementById('back-to-login-btn');
+    const createTeamBtn = document.getElementById('create-team-btn');
+    const submitCreateBtn = document.getElementById('submit-create-btn');
+    const cancelCreateBtn = document.getElementById('cancel-create-btn');
+    const joinTeamBtn = document.getElementById('join-team-btn');
+    const enterTeamBtn = document.getElementById('enter-team-btn');
 
     if (!loginBtn || !registerBtn) {
         console.error('Buttons not found');
