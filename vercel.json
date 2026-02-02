@@ -17,10 +17,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1",
-      "headers": {
-        "Cache-Control": "no-cache"
-      }
+      "dest": "frontend/$1"
     },
     {
       "src": "/",
