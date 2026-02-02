@@ -646,3 +646,96 @@ select {
 .hidden {
     display: none !important;
 }
+
+.badge {
+    background: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.empty-hint {
+    color: var(--text-light);
+    font-size: 13px;
+    text-align: center;
+}
+
+.my-locations-list {
+    margin-top: 12px;
+}
+
+.location-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.location-item:hover {
+    background: rgba(79, 70, 229, 0.1);
+}
+
+.location-item.primary {
+    border-left: 3px solid var(--primary);
+}
+
+.location-item .location-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.location-item .location-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.location-item .location-address {
+    font-size: 11px;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.location-item .delete-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.location-item .delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.location-item.primary .delete-btn {
+    color: var(--primary);
+}
+
+.location-item.primary .delete-btn:hover {
+    background: rgba(79, 70, 229, 0.1);
+}
+
+.location-item.primary .delete-btn::after {
+    content: '设为起点';
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.selected-location .location-name {
+    font-weight: 500;
+}

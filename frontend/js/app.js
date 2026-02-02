@@ -1,6 +1,7 @@
 let currentTeam = null;
 let currentUser = null;
-let myLocation = null;
+let myLocations = [];
+let primaryLocationIndex = 0;
 let teamMembers = [];
 let realtimeSubscription = null;
 
@@ -239,10 +240,13 @@ function setupTeamPageListeners() {
     const findPlacesBtn = document.getElementById('find-places-btn');
     const leaveTeamBtn = document.getElementById('leave-team-btn');
     const closeModalBtn = document.getElementById('close-modal');
+    const clearLocationsBtn = document.getElementById('clear-locations-btn');
 
     timeSlider.addEventListener('input', (e) => {
         timeValue.textContent = e.target.value;
     });
+
+    clearLocationsBtn.addEventListener('click', clearAllLocations);
 
     searchBtn.addEventListener('click', async () => {
         const keyword = addressInput.value.trim();
@@ -253,7 +257,7 @@ function setupTeamPageListeners() {
 
         try {
             searchBtn.disabled = true;
-            searchBtn.textContent = '搜索中...';
+            searchBtn.textContent = '添加中...';
             
             await MapManager.ensureInitialized();
             
@@ -278,13 +282,13 @@ function setupTeamPageListeners() {
             };
             
             selectLocation(location);
-            MapManager.setCenter(location.lat, location.lng, 16);
+            addressInput.value = '';
             
         } catch (error) {
             alert(error.message);
         } finally {
             searchBtn.disabled = false;
-            searchBtn.textContent = '搜索';
+            searchBtn.textContent = '添加';
         }
     });
 
@@ -412,20 +416,31 @@ async function loadTeam(teamId) {
 
         document.getElementById('team-name-display').textContent = team.name;
 
-        const { data: myLoc } = await supabase
+        // 加载我的所有位置
+        const { data: myLocs } = await supabase
             .from('locations')
             .select('*')
             .eq('team_id', teamId)
             .eq('user_id', currentUser.id)
-            .single();
+            .order('is_primary', { ascending: false });
 
-        if (myLoc) {
-            myLocation = {
-                lat: myLoc.lat,
-                lng: myLoc.lng,
-                address: myLoc.address,
-            };
-            selectLocation(myLocation);
+        if (myLocs && myLocs.length > 0) {
+            myLocations = myLocs.map(loc => ({
+                lat: loc.lat,
+                lng: loc.lng,
+                address: loc.address,
+            }));
+            
+            // 找到主要位置的索引
+            const primaryIndex = myLocs.findIndex(loc => loc.is_primary === true);
+            primaryLocationIndex = primaryIndex >= 0 ? primaryIndex : 0;
+            
+            updateMyLocationsUI();
+            updateLocationMarkers();
+        } else {
+            myLocations = [];
+            primaryLocationIndex = 0;
+            updateMyLocationsUI();
         }
 
         setupRealtimeSubscription(teamId);
@@ -510,47 +525,220 @@ function displayTeamInfo(team, memberCount) {
 }
 
 async function selectLocation(location) {
-    myLocation = location;
-
-    const locationEl = document.getElementById('selected-location');
-    locationEl.className = 'selected-location has-location';
-    locationEl.innerHTML = `
-        <p>已选择位置</p>
-        <p>${location.address}</p>
-    `;
-
-    MapManager.addMarker('my-location', [location.lat, location.lng], '我的位置', true);
-    MapManager.setCenter(location.lat, location.lng, 16);
-
+    // 检查位置是否已存在
+    const existsIndex = myLocations.findIndex(
+        loc => Math.abs(loc.lat - location.lat) < 0.0001 && 
+              Math.abs(loc.lng - location.lng) < 0.0001
+    );
+    
+    if (existsIndex >= 0) {
+        alert('该位置已添加');
+        return;
+    }
+    
+    // 添加新位置
+    myLocations.push(location);
+    
+    // 更新UI
+    updateMyLocationsUI();
+    
+    // 在地图上添加标记
+    const markerId = `my-location-${myLocations.length - 1}`;
+    MapManager.addMarker(markerId, [location.lat, location.lng], `位置${myLocations.length}`, false);
+    
+    // 更新所有标记
+    updateLocationMarkers();
+    
+    // 保存到数据库（多条记录）
     try {
+        // 删除旧的所有位置记录，然后插入新的
+        await supabase
+            .from('locations')
+            .delete()
+            .eq('team_id', currentTeam.id)
+            .eq('user_id', currentUser.id);
+        
+        // 插入所有位置
+        const locationsToInsert = myLocations.map((loc, index) => ({
+            team_id: currentTeam.id,
+            user_id: currentUser.id,
+            user_name: currentUser.email || '成员',
+            lat: loc.lat,
+            lng: loc.lng,
+            address: loc.address,
+            is_primary: index === primaryLocationIndex,
+            updated_at: new Date().toISOString(),
+        }));
+        
         const { error } = await supabase
             .from('locations')
-            .upsert({
+            .insert(locationsToInsert);
+        
+        if (error) throw error;
+    } catch (error) {
+        console.error('Save locations error:', error);
+    }
+}
+
+function updateMyLocationsUI() {
+    const listEl = document.getElementById('my-locations-list');
+    const countEl = document.getElementById('location-count');
+    const clearBtn = document.getElementById('clear-locations-btn');
+    const selectedEl = document.getElementById('selected-location');
+    
+    countEl.textContent = myLocations.length;
+    clearBtn.style.display = myLocations.length > 0 ? 'block' : 'none';
+    
+    if (myLocations.length === 0) {
+        selectedEl.className = 'selected-location';
+        selectedEl.innerHTML = '<p class="empty-hint">点击地图或搜索添加位置</p>';
+        return;
+    }
+    
+    // 显示主要位置
+    const primary = myLocations[primaryLocationIndex];
+    selectedEl.className = 'selected-location has-location';
+    selectedEl.innerHTML = `
+        <p class="location-name">主要出发位置</p>
+        <p>${primary.address}</p>
+    `;
+    
+    // 渲染位置列表
+    listEl.innerHTML = myLocations.map((loc, index) => `
+        <div class="location-item ${index === primaryLocationIndex ? 'primary' : ''}" 
+             data-index="${index}">
+            <div class="location-info">
+                <div class="location-name">位置 ${index + 1}${index === primaryLocationIndex ? ' (主要)' : ''}</div>
+                <div class="location-address">${loc.address}</div>
+            </div>
+            <button class="delete-btn" data-action="set-primary" data-index="${index}">★</button>
+            <button class="delete-btn" data-action="delete" data-index="${index}">×</button>
+        </div>
+    `).join('');
+    
+    // 添加事件监听
+    listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            const action = btn.dataset.action;
+            
+            if (action === 'delete') {
+                deleteLocation(index);
+            } else if (action === 'set-primary') {
+                setPrimaryLocation(index);
+            }
+        });
+    });
+}
+
+async function deleteLocation(index) {
+    myLocations.splice(index, 0);
+    
+    // 调整主要位置索引
+    if (primaryLocationIndex >= myLocations.length) {
+        primaryLocationIndex = Math.max(0, myLocations.length - 1);
+    }
+    
+    updateMyLocationsUI();
+    updateLocationMarkers();
+    
+    // 更新数据库
+    try {
+        await supabase
+            .from('locations')
+            .delete()
+            .eq('team_id', currentTeam.id)
+            .eq('user_id', currentUser.id);
+        
+        if (myLocations.length > 0) {
+            const locationsToInsert = myLocations.map((loc, idx) => ({
                 team_id: currentTeam.id,
                 user_id: currentUser.id,
                 user_name: currentUser.email || '成员',
-                lat: location.lat,
-                lng: location.lng,
-                address: location.address,
+                lat: loc.lat,
+                lng: loc.lng,
+                address: loc.address,
+                is_primary: idx === primaryLocationIndex,
                 updated_at: new Date().toISOString(),
-            }, {
-                onConflict: 'team_id, user_id',
-            });
-
-        if (error) throw error;
+            }));
+            
+            await supabase.from('locations').insert(locationsToInsert);
+        }
     } catch (error) {
-        console.error('Save location error:', error);
+        console.error('Delete location error:', error);
+    }
+}
+
+async function setPrimaryLocation(index) {
+    primaryLocationIndex = index;
+    updateMyLocationsUI();
+    
+    // 更新数据库
+    try {
+        await supabase
+            .from('locations')
+            .delete()
+            .eq('team_id', currentTeam.id)
+            .eq('user_id', currentUser.id);
+        
+        const locationsToInsert = myLocations.map((loc, idx) => ({
+            team_id: currentTeam.id,
+            user_id: currentUser.id,
+            user_name: currentUser.email || '成员',
+            lat: loc.lat,
+            lng: loc.lng,
+            address: loc.address,
+            is_primary: idx === primaryLocationIndex,
+            updated_at: new Date().toISOString(),
+        }));
+        
+        await supabase.from('locations').insert(locationsToInsert);
+    } catch (error) {
+        console.error('Set primary location error:', error);
+    }
+}
+
+async function clearAllLocations() {
+    if (!confirm('确定要清空所有位置吗？')) return;
+    
+    myLocations = [];
+    primaryLocationIndex = 0;
+    MapManager.clearMarkers();
+    updateMyLocationsUI();
+    
+    try {
+        await supabase
+            .from('locations')
+            .delete()
+            .eq('team_id', currentTeam.id)
+            .eq('user_id', currentUser.id);
+    } catch (error) {
+        console.error('Clear locations error:', error);
+    }
+}
+
+function updateLocationMarkers() {
+    MapManager.clearMarkers();
+    
+    myLocations.forEach((loc, index) => {
+        const markerId = `my-location-${index}`;
+        const isPrimary = index === primaryLocationIndex;
+        MapManager.addMarker(markerId, [loc.lat, loc.lng], isPrimary ? '主要' : `位置${index + 1}`, isPrimary);
+    });
+    
+    // 如果只有一个位置，居中显示
+    if (myLocations.length === 1) {
+        MapManager.setCenter(myLocations[0].lat, myLocations[0].lng, 16);
+    } else if (myLocations.length > 1) {
+        const positions = myLocations.map(loc => [loc.lat, loc.lng]);
+        MapManager.fitBounds(positions);
     }
 }
 
 async function findMeetingPlaces() {
-    if (!myLocation) {
-        alert('请先选择您的位置');
-        return;
-    }
-
-    if (teamMembers.length < 1) {
-        alert('等待其他成员选择位置...');
+    if (myLocations.length === 0) {
+        alert('请先添加您的位置');
         return;
     }
 
@@ -564,16 +752,25 @@ async function findMeetingPlaces() {
     document.getElementById('find-places-btn').disabled = true;
 
     try {
-        const allLocations = [
-            myLocation,
-            ...teamMembers
-                .filter(m => m.user_id !== currentUser.id)
-                .map(m => ({ lat: m.lat, lng: m.lng, address: m.address })),
-        ];
+        // 收集所有位置（包括其他成员的位置）
+        const otherMembersLocations = teamMembers
+            .filter(m => m.user_id !== currentUser.id)
+            .map(m => ({ lat: m.lat, lng: m.lng, address: m.address, isOwn: false }));
+        
+        const myOwnLocations = myLocations.map((loc, idx) => ({ 
+            ...loc, 
+            address: loc.address, 
+            isOwn: true,
+            isPrimary: idx === primaryLocationIndex
+        }));
+        
+        const allLocations = [...myOwnLocations, ...otherMembersLocations];
 
         const candidates = new Map();
 
         for (const loc of allLocations) {
+            if (!loc.lat || !loc.lng) continue;
+            
             try {
                 const places = await MapManager.searchNearby(
                     loc.lat,
@@ -614,6 +811,8 @@ async function findMeetingPlaces() {
 
         for (const [id, place] of candidates) {
             const times = [];
+            
+            // 计算到每个位置的时间
             for (const loc of allLocations) {
                 try {
                     const time = await MapManager.getTravelTime(
@@ -627,7 +826,16 @@ async function findMeetingPlaces() {
                 }
             }
 
-            const maxTimeForPlace = Math.max(...times.map(t => t.time));
+            // 分离自己的位置和其他成员的位置
+            const myTimes = times.filter(t => t.isOwn);
+            const otherTimes = times.filter(t => !t.isOwn);
+            
+            // 计算最远成员到达时间
+            const maxOtherTime = otherTimes.length > 0 ? Math.max(...otherTimes.map(t => t.time)) : 0;
+            // 计算自己的最远位置到达时间
+            const maxMyTime = myTimes.length > 0 ? Math.max(...myTimes.map(t => t.time)) : 0;
+            
+            const maxTimeForPlace = Math.max(maxOtherTime, maxMyTime);
             const avgTime = times.reduce((sum, t) => sum + t.time, 0) / times.length;
 
             if (maxTimeForPlace <= maxTime * 60) {

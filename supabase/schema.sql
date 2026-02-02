@@ -19,8 +19,8 @@ create table if not exists public.locations (
     lat double precision not null,
     lng double precision not null,
     address varchar(500),
-    updated_at timestamptz default now(),
-    unique(team_id, user_id)
+    is_primary boolean default false,
+    updated_at timestamptz default now()
 );
 
 -- 索引
