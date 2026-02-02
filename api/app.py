@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 import os
 import requests
 from functools import wraps
+from dotenv import load_dotenv
+
+# 加载.env文件
+load_dotenv()
 
 app = Flask(__name__)
 
