@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>团建地点推荐</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card" id="auth-section">
+            <h1>团建地点推荐</h1>
+            <p class="subtitle">多人共同选择最佳聚会地点，输入邮箱登录开始</p>
+
+            <div id="email-form">
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" placeholder="请输入邮箱地址">
+                </div>
+                <button class="btn primary" id="send-otp-btn">发送登录链接</button>
+            </div>
+
+            <div id="otp-form" style="display: none;">
+                <div class="form-group">
+                    <label for="otp">验证码</label>
+                    <input type="text" id="otp" placeholder="请输入6位验证码" maxlength="6">
+                </div>
+                <button class="btn primary" id="verify-otp-btn">登录</button>
+                    <p class="resend-hint">没有收到验证码？<button class="link-btn" id="resend-btn">重新发送</button></p>
+                <button class="btn secondary" id="back-btn">返回</button>
+            </div>
+        </div>
+
+        <div class="card" id="team-section" style="display: none;">
+            <h2>我的团队</h2>
+
+            <div class="team-actions">
+                <button class="btn primary" id="create-team-btn">创建新团队</button>
+            </div>
+
+            <div id="create-team-form" style="display: none;">
+                <div class="form-group">
+                    <label for="team-name">团队名称</label>
+                    <input type="text" id="team-name" placeholder="输入团队名称">
+                </div>
+                <button class="btn primary" id="submit-create-btn">创建</button>
+                <button class="btn secondary" id="cancel-create-btn">取消</button>
+            </div>
+
+            <div class="divider">或</div>
+
+            <div class="form-group">
+                <label for="join-code">加入现有团队</label>
+                <input type="text" id="join-code" placeholder="输入邀请码" maxlength="10">
+            </div>
+            <button class="btn secondary" id="join-team-btn">加入团队</button>
+
+            <div id="team-info" style="display: none; margin-top: 20px;">
+                <div class="info-box">
+                    <p><strong>团队名称：</strong><span id="current-team-name"></span></p>
+                    <p><strong>邀请码：</strong><span id="current-team-code"></span></p>
+                    <p><strong>成员数：</strong><span id="member-count"></span></p>
+                </div>
+                <button class="btn primary" id="enter-team-btn">进入团队</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
