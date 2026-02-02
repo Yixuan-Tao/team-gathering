@@ -89,12 +89,16 @@ function setupIndexPageListeners() {
         try {
             loginBtn.disabled = true;
             loginBtn.textContent = '登录中...';
-            await Auth.signInWithPassword(email, password);
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('team-section').style.display = 'block';
-            await loadUserTeams();
+            const { data, error } = await Auth.signInWithPassword(email, password);
+            if (error) {
+                alert('登录失败：' + error.message + '\n\n请确认：\n1. 已注册账号\n2. 邮箱和密码正确');
+            } else {
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('team-section').style.display = 'block';
+                await loadUserTeams();
+            }
         } catch (error) {
-            alert(error.message);
+            alert('登录失败：' + error.message);
         } finally {
             loginBtn.disabled = false;
             loginBtn.textContent = '登录';
@@ -118,10 +122,16 @@ function setupIndexPageListeners() {
         try {
             registerBtn.disabled = true;
             registerBtn.textContent = '注册中...';
-            await Auth.signUp(email, password);
-            alert('注册成功！请查收验证邮件，验证后即可登录');
+            const { data, error } = await Auth.signUp(email, password);
+            if (error) {
+                alert('注册失败：' + error.message);
+            } else {
+                alert('注册成功！\n\n现在可以使用邮箱和密码登录了。');
+                emailInput.value = '';
+                passwordInput.value = '';
+            }
         } catch (error) {
-            alert(error.message);
+            alert('注册失败：' + error.message);
         } finally {
             registerBtn.disabled = false;
             registerBtn.textContent = '注册';

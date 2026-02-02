@@ -261,6 +261,15 @@ select:focus {
     margin-bottom: 0;
 }
 
+.hint-text {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+}
+
 .error {
     color: var(--danger);
     font-size: 14px;
