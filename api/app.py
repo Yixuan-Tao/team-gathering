@@ -2,19 +2,12 @@ from flask import Flask, request, jsonify
 import os
 import requests
 from functools import wraps
-from dotenv import load_dotenv
-
-# 加载.env文件
-load_dotenv()
 
 app = Flask(__name__)
 
-AMAP_KEY = os.environ.get('AMAP_KEY')
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
-
-if not AMAP_KEY or not SUPABASE_URL or not SUPABASE_KEY:
-    raise EnvironmentError('Missing required environment variables')
+AMAP_KEY = os.environ.get('AMAP_KEY', 'e6d2ec2bcd8588ad54923f72d837254f')
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://nfslocwxeizcautcgljz.supabase.co')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mc2xvY3d4ZWl6Y2F1dGNnbGp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNzI1NzUsImV4cCI6MjA4NDc0ODU3NX0.ijTZI0Gv8I5MjKUgrR23_pEYdlwrjc4VRvOVJ1ERH8I')
 
 
 def cors(f):
@@ -59,7 +52,6 @@ def search_nearby():
         'types': types,
         'keywords': keyword,
         'page_size': 30,
-        'page_index': 1,
         'extensions': 'base',
     }
 
@@ -68,25 +60,34 @@ def search_nearby():
         data = response.json()
 
         if data.get('status') != '1':
-            return jsonify({'error': data.get('info', '搜索失败')}), 400
+            return jsonify({'error': data.get('info', '搜索失败'), 'details': params}), 400
 
         pois = data.get('pois', [])
         results = []
         for poi in pois:
+            loc = poi.get('location', '')
+            if loc:
+                parts = loc.split(',')
+                lat_val = float(parts[1]) if len(parts) > 1 else 0
+                lng_val = float(parts[0]) if len(parts) > 0 else 0
+            else:
+                lat_val = 0
+                lng_val = 0
+
             results.append({
                 'id': poi.get('id'),
                 'name': poi.get('name'),
                 'address': poi.get('address'),
                 'location': {
-                    'lat': float(poi.get('location', '').split(',')[1]) if poi.get('location') else 0,
-                    'lng': float(poi.get('location', '').split(',')[0]) if poi.get('location') else 0,
+                    'lat': lat_val,
+                    'lng': lng_val,
                 },
                 'type': poi.get('type'),
                 'distance': poi.get('distance'),
             })
 
         return jsonify({'pois': results})
-    except requests.RequestException as e:
+    except Exception as e:
         return jsonify({'error': f'请求失败: {str(e)}'}), 500
 
 
@@ -116,11 +117,7 @@ def direction():
     params = {
         'key': AMAP_KEY,
         'extensions': 'base',
-        'strategy': '0',
     }
-
-    if api_mode == 'transit':
-        params['city'] = '全国'
 
     try:
         response = requests.get(url, params=params, timeout=10)
@@ -158,90 +155,9 @@ def direction():
                 })
 
         return jsonify({'error': '未找到路线'})
-    except requests.RequestException as e:
-        return jsonify({'error': f'请求失败: {str(e)}'}), 500
-
-
-@app.route('/api/geocode', methods=['POST', 'OPTIONS'])
-@cors
-def geocode():
-    if request.method == 'OPTIONS':
-        return jsonify({}), 204
-
-    data = request.get_json()
-    address = data.get('address')
-
-    if not address:
-        return jsonify({'error': '缺少地址参数'}), 400
-
-    url = 'https://restapi.amap.com/v3/geocode/geo'
-    params = {
-        'key': AMAP_KEY,
-        'address': address,
-    }
-
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        data = response.json()
-
-        if data.get('status') != '1':
-            return jsonify({'error': data.get('info', '地理编码失败')}), 400
-
-        geocodes = data.get('geocodes', [])
-        if geocodes:
-            geo = geocodes[0]
-            location = geo.get('location', '').split(',')
-            return jsonify({
-                'lat': float(location[1]) if len(location) > 1 else 0,
-                'lng': float(location[0]) if len(location) > 1 else 0,
-                'formatted_address': geo.get('formatted_address'),
-            })
-
-        return jsonify({'error': '未找到地址'})
-    except requests.RequestException as e:
-        return jsonify({'error': f'请求失败: {str(e)}'}), 500
-
-
-# 高德地图API代理路由
-@app.route('/_AMapService/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
-@cors
-def amap_proxy(path):
-    """高德地图API代理，添加安全密钥"""
-    try:
-        import urllib.parse
-        
-        # 获取查询参数
-        params = request.args.to_dict()
-        
-        # 构建目标URL
-        if path.startswith('v4/map/styles'):
-            base_url = 'https://webapi.amap.com/v4/map/styles'
-        else:
-            base_url = f'https://restapi.amap.com/{path}'
-        
-        # 添加安全密钥
-        jscode = os.environ.get('AMAP_JSCODE', '5fb470dade98ea5829b7455525e88ac7')
-        params['jscode'] = jscode
-        
-        # 添加API密钥
-        params['key'] = AMAP_KEY
-        
-        # 构建完整URL
-        query_string = urllib.parse.urlencode(params)
-        target_url = f'{base_url}?{query_string}'
-        
-        # 转发请求
-        if request.method == 'GET':
-            response = requests.get(target_url, timeout=10)
-        elif request.method == 'POST':
-            response = requests.post(target_url, json=request.get_json(), timeout=10)
-        else:
-            return jsonify({}), 204
-        
-        # 返回响应
-        return jsonify(response.json()), response.status_code
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'请求失败: {str(e)}'}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
