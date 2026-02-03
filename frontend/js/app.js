@@ -333,8 +333,11 @@ function setupTeamPageListeners() {
     });
 
     MapManager.init('map').then(() => {
-        console.log('Map initialized successfully');
-        loadTeamMembers();
+        console.log('Map initialized');
+        // 延迟加载成员，确保地图完全准备好
+        setTimeout(() => {
+            loadTeamMembers();
+        }, 500);
     }).catch(err => {
         console.error('Map init failed:', err);
     });

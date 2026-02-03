@@ -23,7 +23,13 @@ const MapManager = {
                     this.map = new AMap.Map(containerId, {
                         zoom: 12,
                         center: [116.397428, 39.90923],
+                        resizeEnable: true,
                         ...options,
+                    });
+
+                    // 等待地图加载完成
+                    this.map.on('complete', () => {
+                        console.log('Map load complete');
                     });
 
                     this.driving = new AMap.Driving({
@@ -113,8 +119,8 @@ const MapManager = {
     },
 
     addMarker(id, position, info, isMyLocation = false) {
-        if (!this.initialized) {
-            console.warn('Map not initialized yet');
+        if (!this.initialized || !this.map) {
+            console.warn('Map not ready yet');
             return;
         }
 
@@ -147,6 +153,12 @@ const MapManager = {
         `;
 
         try {
+            // 确保地图有有效的中心点
+            const center = this.map.getCenter();
+            if (!center || isNaN(center.getLng()) || isNaN(center.getLat())) {
+                this.map.setCenter([116.397428, 39.90923]);
+            }
+
             const marker = new AMap.Marker({
                 position: amapPosition,
                 content: content,
@@ -177,7 +189,8 @@ const MapManager = {
     },
 
     setCenter(lat, lng, zoom = null) {
-        if (!this.initialized) return;
+        if (!this.initialized || !this.map) return;
+
         // 验证坐标有效性
         if (typeof lat !== 'number' || typeof lng !== 'number' ||
             isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 ||
@@ -185,6 +198,7 @@ const MapManager = {
             console.warn('Invalid center coordinates:', lat, lng);
             return;
         }
+
         try {
             this.map.setCenter([lng, lat]);
             if (zoom) {
@@ -192,6 +206,44 @@ const MapManager = {
             }
         } catch (error) {
             console.error('Failed to setCenter:', error, { lat, lng });
+        }
+    },
+
+    fitBounds(positions) {
+        if (!this.initialized || !this.map || !positions || positions.length === 0) return;
+
+        // 过滤无效坐标
+        const validPositions = positions.filter(pos =>
+            pos && Array.isArray(pos) && pos.length === 2 &&
+            typeof pos[0] === 'number' && typeof pos[1] === 'number' &&
+            !isNaN(pos[0]) && !isNaN(pos[1]) &&
+            pos[0] !== 0 && pos[1] !== 0 &&
+            Math.abs(pos[0]) <= 90 && Math.abs(pos[1]) <= 180
+        );
+
+        if (validPositions.length === 0) {
+            console.warn('No valid positions for fitBounds:', positions);
+            return;
+        }
+
+        if (validPositions.length === 1) {
+            this.setCenter(validPositions[0][0], validPositions[0][1], 14);
+            return;
+        }
+
+        try {
+            // 先设置中心点
+            const avgLat = validPositions.reduce((sum, p) => sum + p[0], 0) / validPositions.length;
+            const avgLng = validPositions.reduce((sum, p) => sum + p[1], 0) / validPositions.length;
+            this.map.setCenter([avgLng, avgLat]);
+
+            const bounds = new AMap.Bounds();
+            validPositions.forEach(pos => {
+                bounds.extend([pos[1], pos[0]]);
+            });
+            this.map.setBounds(bounds);
+        } catch (error) {
+            console.error('Failed to fitBounds:', error, { positions, validPositions });
         }
     },
 
