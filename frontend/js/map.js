@@ -121,6 +121,7 @@ const MapManager = {
         // 验证坐标是否有效（position 格式为 [lat, lng]）
         if (!position || !Array.isArray(position) || position.length !== 2 ||
             isNaN(position[0]) || isNaN(position[1]) ||
+            position[0] === 0 || position[1] === 0 ||
             Math.abs(position[0]) > 90 || Math.abs(position[1]) > 180) {
             console.warn('Invalid marker position:', position);
             return;
@@ -170,6 +171,12 @@ const MapManager = {
 
     setCenter(lat, lng, zoom = null) {
         if (!this.initialized) return;
+        // 验证坐标有效性
+        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0 ||
+            Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            console.warn('Invalid center coordinates:', lat, lng);
+            return;
+        }
         this.map.setCenter([lng, lat]);
         if (zoom) {
             this.map.setZoom(zoom);
@@ -179,15 +186,23 @@ const MapManager = {
     fitBounds(positions) {
         if (!this.initialized || positions.length === 0) return;
 
-        if (positions.length === 1) {
-            // positions 格式为 [lat, lng]，AMap 需要 [lng, lat]
-            this.setCenter(positions[0][0], positions[0][1], 14);
+        // 过滤无效坐标
+        const validPositions = positions.filter(pos => 
+            pos && Array.isArray(pos) && pos.length === 2 &&
+            !isNaN(pos[0]) && !isNaN(pos[1]) &&
+            pos[0] !== 0 && pos[1] !== 0 &&
+            Math.abs(pos[0]) <= 90 && Math.abs(pos[1]) <= 180
+        );
+
+        if (validPositions.length === 0) return;
+
+        if (validPositions.length === 1) {
+            this.setCenter(validPositions[0][0], validPositions[0][1], 14);
             return;
         }
 
         const bounds = new AMap.Bounds();
-        positions.forEach(pos => {
-            // 转换为 [lng, lat] 格式
+        validPositions.forEach(pos => {
             bounds.extend([pos[1], pos[0]]);
         });
         this.map.setBounds(bounds);
