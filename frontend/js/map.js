@@ -135,14 +135,22 @@ const MapManager = {
 
         console.log('Creating marker:', { id, amapPosition, info });
 
+        // 创建标记内容
+        const content = document.createElement('div');
+        content.style.cssText = `
+            width: 24px;
+            height: 24px;
+            background: ${isMyLocation ? '#10B981' : '#6366F1'};
+            border: 3px solid ${isMyLocation ? '#D1FAE5' : '#EEF2FF'};
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        `;
+
         try {
             const marker = new AMap.Marker({
                 position: amapPosition,
+                content: content,
                 map: this.map,
-                label: info ? {
-                    content: `<div class="marker-label ${isMyLocation ? 'my-location' : ''}">${info}</div>`,
-                    offset: new AMap.Pixel(-50, -30),
-                } : undefined,
             });
 
             this.markers.set(id, marker);
