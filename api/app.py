@@ -159,10 +159,6 @@ def direction():
         return jsonify({'error': f'请求失败: {str(e)}'}), 500
 
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-
 @app.route('/api/geocode', methods=['POST', 'OPTIONS'])
 @cors
 def geocode():
@@ -201,3 +197,7 @@ def geocode():
         return jsonify({'error': '未找到地址'})
     except Exception as e:
         return jsonify({'error': f'请求失败: {str(e)}'}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

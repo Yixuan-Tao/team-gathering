@@ -28,7 +28,7 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 async function searchNearby(lat, lng, types, keyword = '') {
-    return apiRequest('/search-nearby', {
+    return apiRequest('/api/search-nearby', {
         method: 'POST',
         body: JSON.stringify({ lat, lng, types, keyword }),
     });
