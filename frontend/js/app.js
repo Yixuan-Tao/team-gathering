@@ -514,12 +514,12 @@ async function loadTeamMembers() {
             MapManager.fitBounds(positions);
         }
 
-        teamMembers.forEach(member => {
+        teamMembers.forEach((member, index) => {
             const isMe = member.user_id === currentUser.id;
             MapManager.addMarker(
                 member.user_id,
                 [member.lat, member.lng],
-                isMe ? '我' : `成员${teamMembers.indexOf(member)}`,
+                isMe ? '我' : `成员${index + 1}`,
                 isMe
             );
         });
