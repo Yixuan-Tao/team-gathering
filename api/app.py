@@ -68,8 +68,8 @@ def search_nearby():
             loc = poi.get('location', '')
             if loc:
                 parts = loc.split(',')
-                lat_val = float(parts[1]) if len(parts) > 1 else 0
                 lng_val = float(parts[0]) if len(parts) > 0 else 0
+                lat_val = float(parts[1]) if len(parts) > 1 else 0
             else:
                 lat_val = 0
                 lng_val = 0

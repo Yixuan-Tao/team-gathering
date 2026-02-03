@@ -118,18 +118,21 @@ const MapManager = {
             return;
         }
         
-        // 验证坐标是否有效
+        // 验证坐标是否有效（position 格式为 [lat, lng]）
         if (!position || !Array.isArray(position) || position.length !== 2 ||
             isNaN(position[0]) || isNaN(position[1]) ||
-            Math.abs(position[0]) > 180 || Math.abs(position[1]) > 90) {
+            Math.abs(position[0]) > 90 || Math.abs(position[1]) > 180) {
             console.warn('Invalid marker position:', position);
             return;
         }
         
         this.removeMarker(id);
 
+        // AMap 需要 [lng, lat] 格式，转换坐标顺序
+        const amapPosition = [position[1], position[0]];
+
         const marker = new AMap.Marker({
-            position: position,
+            position: amapPosition,
             map: this.map,
         });
 
@@ -177,13 +180,15 @@ const MapManager = {
         if (!this.initialized || positions.length === 0) return;
 
         if (positions.length === 1) {
+            // positions 格式为 [lat, lng]，AMap 需要 [lng, lat]
             this.setCenter(positions[0][0], positions[0][1], 14);
             return;
         }
 
         const bounds = new AMap.Bounds();
         positions.forEach(pos => {
-            bounds.extend(pos);
+            // 转换为 [lng, lat] 格式
+            bounds.extend([pos[1], pos[0]]);
         });
         this.map.setBounds(bounds);
     },
