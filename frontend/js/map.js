@@ -117,6 +117,15 @@ const MapManager = {
             console.warn('Map not initialized yet');
             return;
         }
+        
+        // 验证坐标是否有效
+        if (!position || !Array.isArray(position) || position.length !== 2 ||
+            isNaN(position[0]) || isNaN(position[1]) ||
+            Math.abs(position[0]) > 180 || Math.abs(position[1]) > 90) {
+            console.warn('Invalid marker position:', position);
+            return;
+        }
+        
         this.removeMarker(id);
 
         const marker = new AMap.Marker({

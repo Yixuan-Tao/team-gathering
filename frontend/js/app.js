@@ -425,15 +425,32 @@ async function loadTeam(teamId) {
             .order('is_primary', { ascending: false });
 
         if (myLocs && myLocs.length > 0) {
-            myLocations = myLocs.map(loc => ({
+            // 过滤无效的坐标
+            const validLocs = myLocs.filter(loc => 
+                loc.lat && loc.lng && 
+                !isNaN(loc.lat) && !isNaN(loc.lng) &&
+                Math.abs(loc.lng) <= 180 && Math.abs(loc.lat) <= 90
+            );
+            
+            if (validLocs.length === 0) {
+                myLocations = [];
+                primaryLocationIndex = 0;
+                updateMyLocationsUI();
+                return;
+            }
+            
+            myLocations = validLocs.map(loc => ({
                 lat: loc.lat,
                 lng: loc.lng,
                 address: loc.address,
             }));
             
-            // 找到主要位置的索引
-            const primaryIndex = myLocs.findIndex(loc => loc.is_primary === true);
-            primaryLocationIndex = primaryIndex >= 0 ? primaryIndex : 0;
+            // 找到主要位置的索引（确保在有效范围内）
+            let primaryIndex = validLocs.findIndex(loc => loc.is_primary === true);
+            if (primaryIndex < 0) {
+                primaryIndex = 0;
+            }
+            primaryLocationIndex = primaryIndex;
             
             updateMyLocationsUI();
             updateLocationMarkers();
@@ -479,7 +496,14 @@ async function loadTeamMembers() {
 
         if (error) throw error;
 
-        teamMembers = locations || [];
+        // 过滤无效坐标的成员
+        const validLocations = (locations || []).filter(m => 
+            m.lat && m.lng && 
+            !isNaN(m.lat) && !isNaN(m.lng) &&
+            Math.abs(m.lng) <= 180 && Math.abs(m.lat) <= 90
+        );
+        
+        teamMembers = validLocations;
         updateMemberList();
 
         const positions = teamMembers.map(m => [m.lng, m.lat]);
@@ -525,6 +549,14 @@ function displayTeamInfo(team, memberCount) {
 }
 
 async function selectLocation(location) {
+    // 验证坐标是否有效
+    if (!location || !location.lat || !location.lng ||
+        isNaN(location.lat) || isNaN(location.lng) ||
+        Math.abs(location.lng) > 180 || Math.abs(location.lat) > 90) {
+        alert('无效的坐标位置，请重新选择');
+        return;
+    }
+    
     // 检查位置是否已存在
     const existsIndex = myLocations.findIndex(
         loc => Math.abs(loc.lat - location.lat) < 0.0001 && 
@@ -773,7 +805,9 @@ async function findMeetingPlaces() {
         const candidates = new Map();
 
         for (const loc of allLocations) {
-            if (!loc.lat || !loc.lng) {
+            if (!loc.lat || !loc.lng || 
+                isNaN(loc.lat) || isNaN(loc.lng) ||
+                Math.abs(loc.lng) > 180 || Math.abs(loc.lat) > 90) {
                 console.warn('Skipping invalid location:', loc);
                 continue;
             }
