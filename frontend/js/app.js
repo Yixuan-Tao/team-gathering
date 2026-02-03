@@ -333,6 +333,7 @@ function setupTeamPageListeners() {
     });
 
     MapManager.init('map').then(() => {
+        console.log('Map initialized successfully');
         loadTeamMembers();
     }).catch(err => {
         console.error('Map init failed:', err);
@@ -426,35 +427,40 @@ async function loadTeam(teamId) {
 
         if (myLocs && myLocs.length > 0) {
             // 过滤无效的坐标（包括 NaN 和 0 值）
-            const validLocs = myLocs.filter(loc => 
+            const validLocs = myLocs.filter(loc =>
                 loc.lat && loc.lng &&
+                typeof loc.lat === 'number' && typeof loc.lng === 'number' &&
                 !isNaN(loc.lat) && !isNaN(loc.lng) &&
                 loc.lat !== 0 && loc.lng !== 0 &&
                 Math.abs(loc.lng) <= 180 && Math.abs(loc.lat) <= 90
             );
-            
+
             if (validLocs.length === 0) {
                 myLocations = [];
                 primaryLocationIndex = 0;
                 updateMyLocationsUI();
                 return;
             }
-            
+
             myLocations = validLocs.map(loc => ({
                 lat: loc.lat,
                 lng: loc.lng,
                 address: loc.address,
             }));
-            
+
             // 找到主要位置的索引（确保在有效范围内）
             let primaryIndex = validLocs.findIndex(loc => loc.is_primary === true);
             if (primaryIndex < 0) {
                 primaryIndex = 0;
             }
             primaryLocationIndex = primaryIndex;
-            
+
             updateMyLocationsUI();
-            updateLocationMarkers();
+
+            // 只有地图初始化后才更新标记
+            if (MapManager.initialized) {
+                updateLocationMarkers();
+            }
         } else {
             myLocations = [];
             primaryLocationIndex = 0;
@@ -469,6 +475,10 @@ async function loadTeam(teamId) {
 }
 
 function setupRealtimeSubscription(teamId) {
+    if (realtimeSubscription) {
+        supabase.removeChannel(realtimeSubscription);
+    }
+
     realtimeSubscription = supabase
         .channel(`team:${teamId}`)
         .on(
@@ -480,7 +490,10 @@ function setupRealtimeSubscription(teamId) {
                 filter: `team_id=eq.${teamId}`,
             },
             async (payload) => {
-                await loadTeamMembers();
+                console.log('Realtime change detected:', payload);
+                if (MapManager.initialized) {
+                    await loadTeamMembers();
+                }
             }
         )
         .subscribe();
@@ -497,19 +510,35 @@ async function loadTeamMembers() {
 
         if (error) throw error;
 
+        console.log('Raw locations from DB:', locations);
+
         // 过滤无效坐标的成员
-        const validLocations = (locations || []).filter(m => 
-            m.lat && m.lng &&
-            !isNaN(m.lat) && !isNaN(m.lng) &&
-            m.lat !== 0 && m.lng !== 0 &&
-            Math.abs(m.lng) <= 180 && Math.abs(m.lat) <= 90
-        );
+        const validLocations = (locations || []).filter(m => {
+            const isValid =
+                m.lat != null && m.lng != null &&
+                typeof m.lat === 'number' && typeof m.lng === 'number' &&
+                !isNaN(m.lat) && !isNaN(m.lng) &&
+                m.lat !== 0 && m.lng !== 0 &&
+                Math.abs(m.lng) <= 180 && Math.abs(m.lat) <= 90;
+            if (!isValid) {
+                console.warn('Invalid location data:', m);
+            }
+            return isValid;
+        });
+
+        console.log('Valid locations:', validLocations);
 
         teamMembers = validLocations;
         updateMemberList();
 
+        if (!MapManager.initialized) {
+            console.warn('Map not initialized yet, skipping markers');
+            return;
+        }
+
         // 传递 [lat, lng] 格式给 fitBounds
         const positions = teamMembers.map(m => [m.lat, m.lng]);
+        console.log('Positions for fitBounds:', positions);
         if (positions.length > 0) {
             MapManager.fitBounds(positions);
         }
@@ -736,12 +765,14 @@ async function setPrimaryLocation(index) {
 
 async function clearAllLocations() {
     if (!confirm('确定要清空所有位置吗？')) return;
-    
+
     myLocations = [];
     primaryLocationIndex = 0;
-    MapManager.clearMarkers();
+    if (MapManager.initialized) {
+        MapManager.clearMarkers();
+    }
     updateMyLocationsUI();
-    
+
     try {
         await supabase
             .from('locations')
@@ -754,14 +785,19 @@ async function clearAllLocations() {
 }
 
 function updateLocationMarkers() {
+    if (!MapManager.initialized) {
+        console.warn('Map not initialized, skipping marker update');
+        return;
+    }
+
     MapManager.clearMarkers();
-    
+
     myLocations.forEach((loc, index) => {
         const markerId = `my-location-${index}`;
         const isPrimary = index === primaryLocationIndex;
         MapManager.addMarker(markerId, [loc.lat, loc.lng], isPrimary ? '主要' : `位置${index + 1}`, isPrimary);
     });
-    
+
     // 如果只有一个位置，居中显示
     if (myLocations.length === 1) {
         MapManager.setCenter(myLocations[0].lat, myLocations[0].lng, 16);
