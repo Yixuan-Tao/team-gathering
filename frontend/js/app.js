@@ -751,6 +751,9 @@ async function findMeetingPlaces() {
     resultsEl.innerHTML = '<div class="loading"></div>';
     document.getElementById('find-places-btn').disabled = true;
 
+    console.log('=== 开始查找 ===');
+    console.log('Transport:', transportMode, 'MaxTime:', maxTime, 'Type:', placeType);
+
     try {
         // 收集所有位置（包括其他成员的位置）
         const otherMembersLocations = teamMembers
@@ -765,11 +768,15 @@ async function findMeetingPlaces() {
         }));
         
         const allLocations = [...myOwnLocations, ...otherMembersLocations];
+        console.log('All locations count:', allLocations.length);
 
         const candidates = new Map();
 
         for (const loc of allLocations) {
-            if (!loc.lat || !loc.lng) continue;
+            if (!loc.lat || !loc.lng) {
+                console.warn('Skipping invalid location:', loc);
+                continue;
+            }
             
             try {
                 const places = await MapManager.searchNearby(
@@ -779,6 +786,7 @@ async function findMeetingPlaces() {
                     5000,
                     ''
                 );
+                console.log(`Found ${places.length} places near [${loc.lat}, ${loc.lng}]`);
 
                 places.forEach(place => {
                     if (!candidates.has(place.id)) {
@@ -800,6 +808,14 @@ async function findMeetingPlaces() {
             }
         }
 
+        console.log('Total candidates:', candidates.size);
+        
+        if (candidates.size === 0) {
+            resultsEl.innerHTML = '<p class="empty-state">未找到附近场所，请尝试扩大搜索范围或更换地点类型</p>';
+            document.getElementById('find-places-btn').disabled = false;
+            return;
+        }
+
         const results = [];
         const transportModeMap = {
             'driving': 'driving',
@@ -808,6 +824,7 @@ async function findMeetingPlaces() {
         };
 
         const apiMode = transportModeMap[transportMode];
+        const maxTimeInSeconds = maxTime * 60;
 
         for (const [id, place] of candidates) {
             const times = [];
@@ -822,7 +839,8 @@ async function findMeetingPlaces() {
                     );
                     times.push({ ...loc, time });
                 } catch (e) {
-                    times.push({ ...loc, time: maxTime * 60 });
+                    console.warn('Get travel time error:', e);
+                    times.push({ ...loc, time: maxTimeInSeconds });
                 }
             }
 
@@ -838,7 +856,9 @@ async function findMeetingPlaces() {
             const maxTimeForPlace = Math.max(maxOtherTime, maxMyTime);
             const avgTime = times.reduce((sum, t) => sum + t.time, 0) / times.length;
 
-            if (maxTimeForPlace <= maxTime * 60) {
+            console.log(`Place: ${place.name}, maxTime: ${maxTimeForPlace}s, limit: ${maxTimeInSeconds}s`);
+
+            if (maxTimeForPlace <= maxTimeInSeconds) {
                 results.push({
                     ...place,
                     maxTime: Math.round(maxTimeForPlace / 60),
@@ -847,6 +867,8 @@ async function findMeetingPlaces() {
                 });
             }
         }
+
+        console.log('Results after filter:', results.length);
 
         results.sort((a, b) => {
             if (sortBy === 'max') {
@@ -857,7 +879,8 @@ async function findMeetingPlaces() {
 
         displayResults(results);
     } catch (error) {
-        resultsEl.innerHTML = `<p class="error">${error.message}</p>`;
+        console.error('Find places error:', error);
+        resultsEl.innerHTML = `<p class="error">查找失败：${error.message}</p>`;
     } finally {
         document.getElementById('find-places-btn').disabled = false;
     }

@@ -60,6 +60,8 @@ const MapManager = {
     async searchNearby(lat, lng, types, radius = 5000, keyword = '') {
         await this.ensureInitialized();
         
+        console.log('Searching nearby:', { lat, lng, types, radius, keyword });
+        
         try {
             const response = await fetch('/api/search-nearby', {
                 method: 'POST',
@@ -68,9 +70,11 @@ const MapManager = {
             });
             
             const data = await response.json();
+            console.log('Search response:', data);
             
             if (data.error) {
-                throw new Error(data.error);
+                console.error('API error:', data.error);
+                return [];
             }
             
             return data.pois || [];
@@ -97,13 +101,14 @@ const MapManager = {
             const data = await response.json();
             
             if (data.error) {
-                throw new Error(data.error);
+                console.warn('Direction API error:', data.error);
+                return 30; // 默认30分钟
             }
             
-            return Math.round((data.time || 0) / 60);
+            return Math.round((data.time || 0) / 60) || 30;
         } catch (error) {
-            console.error('Get direction error:', error);
-            return 30;
+            console.warn('Get direction error:', error);
+            return 30; // 默认30分钟
         }
     },
 
