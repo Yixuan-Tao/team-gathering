@@ -425,10 +425,11 @@ async function loadTeam(teamId) {
             .order('is_primary', { ascending: false });
 
         if (myLocs && myLocs.length > 0) {
-            // 过滤无效的坐标
+            // 过滤无效的坐标（包括 NaN 和 0 值）
             const validLocs = myLocs.filter(loc => 
-                loc.lat && loc.lng && 
+                loc.lat && loc.lng &&
                 !isNaN(loc.lat) && !isNaN(loc.lng) &&
+                loc.lat !== 0 && loc.lng !== 0 &&
                 Math.abs(loc.lng) <= 180 && Math.abs(loc.lat) <= 90
             );
             
@@ -498,15 +499,17 @@ async function loadTeamMembers() {
 
         // 过滤无效坐标的成员
         const validLocations = (locations || []).filter(m => 
-            m.lat && m.lng && 
+            m.lat && m.lng &&
             !isNaN(m.lat) && !isNaN(m.lng) &&
+            m.lat !== 0 && m.lng !== 0 &&
             Math.abs(m.lng) <= 180 && Math.abs(m.lat) <= 90
         );
-        
+
         teamMembers = validLocations;
         updateMemberList();
 
-        const positions = teamMembers.map(m => [m.lng, m.lat]);
+        // 传递 [lat, lng] 格式给 fitBounds
+        const positions = teamMembers.map(m => [m.lat, m.lng]);
         if (positions.length > 0) {
             MapManager.fitBounds(positions);
         }
