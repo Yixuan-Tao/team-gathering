@@ -545,6 +545,7 @@ async function loadTeamMembers() {
 
         teamMembers.forEach((member, index) => {
             const isMe = member.user_id === currentUser.id;
+            console.log('Adding marker:', { id: member.user_id, position: [member.lat, member.lng], isMe });
             MapManager.addMarker(
                 member.user_id,
                 [member.lat, member.lng],

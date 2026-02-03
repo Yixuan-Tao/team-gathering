@@ -133,26 +133,24 @@ const MapManager = {
         // AMap 需要 [lng, lat] 格式，转换坐标顺序
         const amapPosition = [position[1], position[0]];
 
-        const marker = new AMap.Marker({
-            position: amapPosition,
-            map: this.map,
-        });
+        console.log('Creating marker:', { id, amapPosition, info });
 
-        if (info) {
-            const content = document.createElement('div');
-            content.className = 'marker-info';
-            content.innerHTML = `
-                <div class="marker-label ${isMyLocation ? 'my-location' : ''}">${info}</div>
-            `;
-
-            marker.setLabel({
-                content: content.outerHTML,
-                offset: new AMap.Pixel(-50, -30),
+        try {
+            const marker = new AMap.Marker({
+                position: amapPosition,
+                map: this.map,
+                label: info ? {
+                    content: `<div class="marker-label ${isMyLocation ? 'my-location' : ''}">${info}</div>`,
+                    offset: new AMap.Pixel(-50, -30),
+                } : undefined,
             });
-        }
 
-        this.markers.set(id, marker);
-        return marker;
+            this.markers.set(id, marker);
+            return marker;
+        } catch (error) {
+            console.error('Failed to create marker:', error, { id, amapPosition, info });
+            return null;
+        }
     },
 
     removeMarker(id) {
@@ -179,9 +177,13 @@ const MapManager = {
             console.warn('Invalid center coordinates:', lat, lng);
             return;
         }
-        this.map.setCenter([lng, lat]);
-        if (zoom) {
-            this.map.setZoom(zoom);
+        try {
+            this.map.setCenter([lng, lat]);
+            if (zoom) {
+                this.map.setZoom(zoom);
+            }
+        } catch (error) {
+            console.error('Failed to setCenter:', error, { lat, lng });
         }
     },
 
@@ -197,18 +199,25 @@ const MapManager = {
             Math.abs(pos[0]) <= 90 && Math.abs(pos[1]) <= 180
         );
 
-        if (validPositions.length === 0) return;
+        if (validPositions.length === 0) {
+            console.warn('No valid positions for fitBounds:', positions);
+            return;
+        }
 
         if (validPositions.length === 1) {
             this.setCenter(validPositions[0][0], validPositions[0][1], 14);
             return;
         }
 
-        const bounds = new AMap.Bounds();
-        validPositions.forEach(pos => {
-            bounds.extend([pos[1], pos[0]]);
-        });
-        this.map.setBounds(bounds);
+        try {
+            const bounds = new AMap.Bounds();
+            validPositions.forEach(pos => {
+                bounds.extend([pos[1], pos[0]]);
+            });
+            this.map.setBounds(bounds);
+        } catch (error) {
+            console.error('Failed to fitBounds:', error, { positions, validPositions });
+        }
     },
 
     async onClick(callback) {
