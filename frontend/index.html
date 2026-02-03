@@ -5,16 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>团建地点推荐</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <div class="card" id="auth-section">
             <h1>团建地点推荐</h1>
-            <p class="subtitle">多人共同选择最佳聚会地点，输入邮箱登录开始</p>
+            <p class="subtitle">多人共同选择最佳聚会地点</p>
 
             <div id="email-form">
                 <div class="form-group">
-                    <label for="email">邮箱</label>
+                    <label for="email">邮箱地址</label>
                     <input type="email" id="email" placeholder="请输入邮箱地址">
                 </div>
                 <div class="form-group">
@@ -22,19 +25,19 @@
                     <input type="password" id="password" placeholder="请输入密码（至少6位）">
                 </div>
                 <p class="hint-text">第一次使用请先点击"注册"，之后可直接登录</p>
-                <p class="hint-text"><button class="link-btn" id="forgot-btn">忘记密码？</button></p>
+                <button class="link-btn" id="forgot-btn" style="margin-bottom: 16px; display: inline-block;">忘记密码？</button>
                 <button class="btn primary" id="login-btn">登录</button>
-                <button class="btn secondary" id="register-btn">注册</button>
+                <button class="btn secondary" id="register-btn">注册新账号</button>
             </div>
 
             <div id="reset-form" style="display: none;">
                 <p class="hint-text">输入邮箱，我们将发送重置密码链接</p>
                 <div class="form-group">
-                    <label for="reset-email">邮箱</label>
+                    <label for="reset-email">邮箱地址</label>
                     <input type="email" id="reset-email" placeholder="请输入邮箱地址">
                 </div>
                 <button class="btn primary" id="send-reset-btn">发送重置链接</button>
-                <button class="btn secondary" id="back-to-login-btn">返回</button>
+                <button class="btn secondary" id="back-to-login-btn">返回登录</button>
             </div>
         </div>
 
@@ -50,7 +53,7 @@
                     <label for="team-name">团队名称</label>
                     <input type="text" id="team-name" placeholder="输入团队名称">
                 </div>
-                <button class="btn primary" id="submit-create-btn">创建</button>
+                <button class="btn primary" id="submit-create-btn">创建团队</button>
                 <button class="btn secondary" id="cancel-create-btn">取消</button>
             </div>
 
@@ -58,11 +61,11 @@
 
             <div class="form-group">
                 <label for="join-code">加入现有团队</label>
-                <input type="text" id="join-code" placeholder="输入邀请码" maxlength="10">
+                <input type="text" id="join-code" placeholder="输入6位邀请码" maxlength="6">
             </div>
             <button class="btn secondary" id="join-team-btn">加入团队</button>
 
-            <div id="team-info" style="display: none; margin-top: 20px;">
+            <div id="team-info" style="display: none; margin-top: 24px;">
                 <div class="info-box">
                     <p><strong>团队名称：</strong><span id="current-team-name"></span></p>
                     <p><strong>邀请码：</strong><span id="current-team-code"></span></p>

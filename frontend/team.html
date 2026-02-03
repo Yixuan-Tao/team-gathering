@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>团队地图 - 团建地点推荐</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="layout">
@@ -13,21 +16,21 @@
                 <h2>团建地点推荐</h2>
                 <div class="team-info">
                     <span id="team-name-display"></span>
-                    <button class="btn small" id="leave-team-btn">退出</button>
+                    <button class="btn small" id="leave-team-btn">退出团队</button>
                 </div>
             </div>
 
             <div class="sidebar-section">
                 <h3>我的位置 <span class="badge" id="location-count">0</span></h3>
                 <div class="location-search">
-                    <input type="text" id="address-search" placeholder="搜索地址">
-                    <button class="btn small" id="search-btn">添加</button>
+                    <input type="text" id="address-search" placeholder="搜索地址添加位置">
+                    <button class="btn small primary" id="search-btn">添加</button>
                 </div>
                 <div class="selected-location" id="selected-location">
                     <p class="empty-hint">点击地图或搜索添加位置</p>
                 </div>
                 <div class="my-locations-list" id="my-locations-list"></div>
-                <button class="btn secondary small full-width" id="clear-locations-btn" style="margin-top: 8px; display: none;">清空所有位置</button>
+                <button class="btn secondary small full-width" id="clear-locations-btn" style="margin-top: 12px; display: none;">清空所有位置</button>
             </div>
 
             <div class="sidebar-section">
@@ -42,7 +45,7 @@
                         </label>
                         <label class="radio-item">
                             <input type="radio" name="transport" value="transit">
-                            <span>公交/地铁</span>
+                            <span>公交</span>
                         </label>
                         <label class="radio-item">
                             <input type="radio" name="transport" value="walking">
@@ -52,7 +55,7 @@
                 </div>
 
                 <div class="setting-group">
-                    <label>最大到达时间: <span id="time-value">30</span> 分钟</label>
+                    <label>最大到达时间: <strong id="time-value">30</strong> 分钟</label>
                     <input type="range" id="time-threshold" min="15" max="90" step="15" value="30">
                 </div>
 
@@ -72,11 +75,11 @@
                     <div class="radio-group">
                         <label class="radio-item">
                             <input type="radio" name="sort" value="max" checked>
-                            <span>最远到达时间</span>
+                            <span>最远时间</span>
                         </label>
                         <label class="radio-item">
                             <input type="radio" name="sort" value="avg">
-                            <span>平均到达时间</span>
+                            <span>平均时间</span>
                         </label>
                     </div>
                 </div>
@@ -85,7 +88,7 @@
             </div>
 
             <div class="sidebar-section results-section">
-                <h3>推荐结果 <span id="result-count"></span></h3>
+                <h3>推荐结果 <span class="badge" id="result-count"></span></h3>
                 <div class="results-list" id="results-list">
                     <p class="empty-state">设置条件后点击"查找合适地点"</p>
                 </div>
@@ -118,14 +121,12 @@
     <script src="js/supabase.js"></script>
     <script src="js/auth.js"></script>
 
-    <!-- 高德地图API安全配置 -->
     <script type="text/javascript">
       window._AMapSecurityConfig = {
         serviceHost: "/_AMapService",
       };
     </script>
 
-    <!-- 高德地图API -->
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=fb189d59346f33c09492c4b27e13fcda&plugin=AMap.Driving,AMap.Transfer,AMap.Walking"></script>
 
     <script src="js/map.js"></script>
